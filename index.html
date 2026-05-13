@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PilotCalc">
+<meta name="theme-color" content="#0a0f1e">
+<title>PilotCalc</title>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0f1e;
+    --surface: #0e1628;
+    --surface2: #131d35;
+    --border: #1e3a5f;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --green: #00ff9d;
+    --text: #c8d8f0;
+    --text-dim: #4a6a8a;
+    --glow: 0 0 20px rgba(0, 212, 255, 0.3);
+    --glow2: 0 0 20px rgba(255, 107, 53, 0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%; width: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
+
+  /* Starfield background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 70%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(2px 2px at 35% 15%, rgba(0,212,255,0.3) 0%, transparent 100%),
+      radial-gradient(2px 2px at 70% 85%, rgba(0,212,255,0.2) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative; z-index: 1;
+    max-width: 430px; margin: 0 auto;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  /* Header */
+  .header {
+    padding: 20px 20px 0;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+  }
+
+  .logo-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 4px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #0066aa);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; box-shadow: var(--glow);
+  }
+
+  .logo-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px; font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-shadow: var(--glow);
+  }
+
+  .logo-sub {
+    font-size: 10px; color: var(--text-dim);
+    letter-spacing: 3px; text-transform: uppercase;
+    margin-left: 48px;
+  }
+
+  /* Tab bar */
+  .tabs {
+    display: flex; gap: 8px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: 'Orbitron', monospace;
+    font-size: 8px; letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    -webkit-appearance: none;
+    line-height: 1.4;
+  }
+
+  .tab.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0, 212, 255, 0.08);
+    box-shadow: var(--glow);
+  }
+
+  .tab:nth-child(2).active {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(255, 107, 53, 0.08);
+    box-shadow: var(--glow2);
+  }
+
+  /* Content */
+  .content {
+    flex: 1; padding: 20px;
+    display: flex; flex-direction: column; gap: 16px;
+    overflow-y: auto;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.6;
+  }
+
+  .panel-descent::before {
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .panel-climb::before {
+    background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1; height: 1px;
+    background: var(--border);
+  }
+
+  /* Form groups */
+  .field-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .field-grid.full { grid-template-columns: 1fr; }
+
+  .field {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+
+  .field label {
+    font-size: 10px; letter-spacing: 1px;
+    color: var(--text-dim); text-transform: uppercase;
+  }
+
+  .field input, .field select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 15px;
+    padding: 10px 14px;
+    width: 100%;
+    -webkit-appearance: none;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .field input:focus, .field select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+  }
+
+  .tab-climb ~ .content .field input:focus,
+  .tab-climb ~ .content .field select:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+  }
+
+  .field select option { background: var(--surface2); color: var(--text); }
+
+  .field input[type="number"]::-webkit-inner-spin-button { display: none; }
+
+  /* Segmented control */
+  .seg-control {
+    display: flex; gap: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    overflow: hidden;
+  }
+
+  .seg-btn {
+    flex: 1; padding: 8px 4px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 11px; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .seg-btn.active {
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+  }
+
+  .seg-btn-orange.active { background: var(--accent2); }
+
+  /* Calculate button */
+  .btn-calc {
+    width: 100%;
+    padding: 16px;
+    border: none; border-radius: 14px;
+    font-family: 'Orbitron', monospace;
+    font-size: 12px; letter-spacing: 3px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-appearance: none;
+    position: relative; overflow: hidden;
+  }
+
+  .btn-calc-blue {
+    background: linear-gradient(135deg, #0066aa, #00d4ff);
+    color: #000;
+    box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+  }
+
+  .btn-calc-orange {
+    background: linear-gradient(135deg, #cc4400, #ff6b35);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+  }
+
+  .btn-calc:active { transform: scale(0.97); }
+
+  /* Results */
+  .results {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .results-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Orbitron', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    color: var(--text-dim); text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .results-header .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  .result-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  .result-item {
+    padding: 16px 18px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-item:nth-child(even) { border-right: none; }
+  .result-item:nth-last-child(-n+2) { border-bottom: none; }
+
+  .result-item.full {
+    grid-column: 1 / -1;
+    border-right: none;
+  }
+
+  .result-label {
+    font-size: 10px; color: var(--text-dim);
+    letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .result-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px; font-weight: 600;
+    color: var(--accent);
+  }
+
+  .result-value.orange { color: var(--accent2); }
+  .result-value.green { color: var(--green); }
+
+  .result-unit {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px; color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* Big result highlight */
+  .result-main {
+    padding: 20px 18px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    background: rgba(0, 212, 255, 0.04);
+  }
+
+  .result-main.orange-bg { background: rgba(255, 107, 53, 0.04); }
+
+  .result-main .result-label { text-align: center; font-size: 11px; }
+
+  .result-main .result-value {
+    font-size: 42px;
+    line-height: 1;
+    margin: 8px 0 4px;
+  }
+
+  /* Error */
+  .error {
+    background: rgba(255, 60, 60, 0.1);
+    border: 1px solid rgba(255, 60, 60, 0.3);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #ff6b6b;
+    display: flex; align-items: center; gap: 10px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  /* Info box */
+  .info-box {
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .info-box.orange {
+    background: rgba(255, 107, 53, 0.05);
+    border-color: rgba(255, 107, 53, 0.15);
+  }
+
+  /* Page visibility */
+  .page { display: none; }
+  .page.active { display: contents; }
+
+  /* Divider hint */
+  .hint {
+    font-size: 10px; color: var(--text-dim);
+    text-align: center; letter-spacing: 1px;
+    padding: 4px 0;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .formula-note {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px; color: var(--text-dim);
+    background: var(--bg);
+    border-radius: 8px; padding: 8px 12px;
+    margin-top: 10px; line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-icon">✈</div>
+      <div class="logo-text">PILOTCALC</div>
+    </div>
+    <div class="logo-sub">Flight Operations Calculator</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('descent')">📉 Точка<br>снижения</button>
+    <button class="tab" onclick="switchTab('climb')">📈 Градиент<br>набора</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══════════════ DESCENT PAGE ═══════════════ -->
+    <div class="page active" id="page-descent">
+
+      <div class="panel panel-descent">
+        <div class="panel-title">Параметры воздушного судна</div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Высота текущая (ft)</label>
+            <input type="number" id="d-alt-current" placeholder="35000" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Высота цели (ft)</label>
+            <input type="number" id="d-alt-target" placeholder="3000" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-descent">
+        <div class="panel-title">Скорость</div>
+        <div class="field">
+          <label>Режим скорости</label>
+          <div class="seg-control" id="speed-mode-ctrl">
+            <button class="seg-btn active" onclick="setSpeedMode('gs')">Путевая</button>
+            <button class="seg-btn" onclick="setSpeedMode('cas')">Приборная → Путевая</button>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;" id="gs-field">
+          <div class="field">
+            <label>Путевая скорость (kt)</label>
+            <input type="number" id="d-gs" placeholder="450" inputmode="decimal">
+          </div>
+        </div>
+
+        <div style="margin-top:12px; display:none;" id="cas-fields">
+          <div class="field-grid">
+            <div class="field">
+              <label>Прибор. скорость CAS (kt)</label>
+              <input type="number" id="d-cas" placeholder="280" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label>Эшелон (ft)</label>
+              <input type="number" id="d-fl" placeholder="35000" inputmode="decimal">
+            </div>
+          </div>
+          <div class="field-grid" style="margin-top:12px;">
+            <div class="field">
+              <label>Температура OAT (°C)</label>
+              <input type="number" id="d-oat" placeholder="-56" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label>Ветер (kt, + = попутный)</label>
+              <input type="number" id="d-wind" placeholder="-20" inputmode="decimal">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-descent">
+        <div class="panel-title">Вертикальная скорость</div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Верт. скорость (ft/min)</label>
+            <input type="number" id="d-vs" placeholder="1800" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Угол снижения (°)</label>
+            <input type="number" id="d-angle" placeholder="3.0" step="0.1" inputmode="decimal">
+          </div>
+        </div>
+        <div class="info-box" style="margin-top:12px;">
+          Заполните верт. скорость <b>ИЛИ</b> угол снижения — второе рассчитается автоматически
+        </div>
+      </div>
+
+      <button class="btn-calc btn-calc-blue" onclick="calcDescent()">РАССЧИТАТЬ ▶</button>
+
+      <div id="descent-result"></div>
+
+    </div><!-- /page-descent -->
+
+
+    <!-- ═══════════════ CLIMB PAGE ═══════════════ -->
+    <div class="page" id="page-climb">
+
+      <div class="panel panel-climb">
+        <div class="panel-title">Параметры ВС</div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Взлётная масса (кг)</label>
+            <input type="number" id="c-mass" placeholder="70000" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Тяга двигат. (кН, всего)</label>
+            <input type="number" id="c-thrust" placeholder="260" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-climb">
+        <div class="panel-title">Высоты и препятствия</div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Выс. аэродрома (ft)</label>
+            <input type="number" id="c-elev" placeholder="500" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Выс. препятствия (ft)</label>
+            <input type="number" id="c-obs" placeholder="1500" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-grid" style="margin-top:12px;">
+          <div class="field">
+            <label>Дальность до препят. (m)</label>
+            <input type="number" id="c-dist" placeholder="3000" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Запас высоты (ft)</label>
+            <input type="number" id="c-margin" placeholder="50" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-climb">
+        <div class="panel-title">Скорость и атмосфера</div>
+        <div class="field-grid">
+          <div class="field">
+            <label>V2 / скорость набора (kt)</label>
+            <input type="number" id="c-v2" placeholder="160" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Сопротивление шасси (%)</label>
+            <div class="seg-control" id="gear-ctrl" style="margin-top:2px;">
+              <button class="seg-btn-orange seg-btn active" onclick="setGear(false,this)">Убрано</button>
+              <button class="seg-btn-orange seg-btn" onclick="setGear(true,this)">Выпущено</button>
+            </div>
+          </div>
+        </div>
+        <div class="field-grid" style="margin-top:12px;">
+          <div class="field">
+            <label>OAT (°C)</label>
+            <input type="number" id="c-oat" placeholder="15" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>QNH (hPa)</label>
+            <input type="number" id="c-qnh" placeholder="1013" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-climb">
+        <div class="panel-title">Режим расчёта</div>
+        <div class="field">
+          <label>Рассчитать</label>
+          <div class="seg-control" id="climb-mode-ctrl">
+            <button class="seg-btn-orange seg-btn active" onclick="setClimbMode('gradient', this)">Требуемый градиент</button>
+            <button class="seg-btn-orange seg-btn" onclick="setClimbMode('check', this)">Проверка факт. тяги</button>
+          </div>
+        </div>
+        <div class="info-box orange" style="margin-top:12px;">
+          <b>Требуемый градиент</b> — минимальный % набора для обхода препятствия.<br>
+          <b>Проверка</b> — определяет фактический градиент по тяге.
+        </div>
+      </div>
+
+      <button class="btn-calc btn-calc-orange" onclick="calcClimb()">РАССЧИТАТЬ ▶</button>
+
+      <div id="climb-result"></div>
+
+    </div><!-- /page-climb -->
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let speedMode = 'gs';
+let gearExtended = false;
+let climbMode = 'gradient';
+
+// ═══════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', (i === 0 && name==='descent') || (i===1 && name==='climb'));
+  });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// SPEED MODE
+// ═══════════════════════════════════════
+function setSpeedMode(mode) {
+  speedMode = mode;
+  document.querySelectorAll('#speed-mode-ctrl .seg-btn').forEach((b,i) => {
+    b.classList.toggle('active', (i===0 && mode==='gs') || (i===1 && mode==='cas'));
+  });
+  document.getElementById('gs-field').style.display = mode==='gs' ? '' : 'none';
+  document.getElementById('cas-fields').style.display = mode==='cas' ? '' : 'none';
+}
+
+function setGear(ext, btn) {
+  gearExtended = ext;
+  btn.closest('.seg-control').querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setClimbMode(mode, btn) {
+  climbMode = mode;
+  btn.closest('.seg-control').querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// CAS → TAS conversion (ISA model)
+// ═══════════════════════════════════════
+function casToTas(cas_kt, alt_ft, oat_c) {
+  // Using compressible flow equations simplified
+  const P0 = 101325;
+  const T0 = 288.15;
+  const gamma = 1.4;
+  const R = 287.05;
+  const a0 = 340.294; // m/s
+
+  const cas = cas_kt * 0.514444;
+  // Pressure at altitude (ISA standard if no OAT given)
+  const alt_m = alt_ft * 0.3048;
+  const P = P0 * Math.pow(1 - 0.0000226577 * alt_m, 5.25588);
+
+  // Actual temperature
+  const T = oat_c + 273.15;
+
+  // Local speed of sound
+  const a = Math.sqrt(gamma * R * T);
+
+  // Impact pressure from CAS
+  const qc = P0 * (Math.pow(1 + (gamma-1)/2 * Math.pow(cas/a0, 2), gamma/(gamma-1)) - 1);
+
+  // TAS from impact pressure and local conditions
+  const M = Math.sqrt(2/(gamma-1) * (Math.pow(qc/P + 1, (gamma-1)/gamma) - 1));
+  const tas = M * a;
+
+  return tas / 0.514444; // kt
+}
+
+// ═══════════════════════════════════════
+// DESCENT CALCULATION
+// ═══════════════════════════════════════
+function calcDescent() {
+  const altCurrent = parseFloat(document.getElementById('d-alt-current').value);
+  const altTarget  = parseFloat(document.getElementById('d-alt-target').value);
+  const vsRaw      = parseFloat(document.getElementById('d-vs').value);
+  const angleRaw   = parseFloat(document.getElementById('d-angle').value);
+
+  if (!altCurrent || !altTarget || isNaN(altCurrent) || isNaN(altTarget)) {
+    showError('descent-result', 'Введите текущую и целевую высоту');
+    return;
+  }
+
+  const altDiff = altCurrent - altTarget; // ft
+  if (altDiff <= 0) {
+    showError('descent-result', 'Текущая высота должна быть больше целевой');
+    return;
+  }
+
+  // Determine ground speed
+  let gs_kt;
+  if (speedMode === 'gs') {
+    gs_kt = parseFloat(document.getElementById('d-gs').value);
+    if (!gs_kt || isNaN(gs_kt)) { showError('descent-result', 'Введите путевую скорость'); return; }
+  } else {
+    const cas = parseFloat(document.getElementById('d-cas').value);
+    const fl  = parseFloat(document.getElementById('d-fl').value);
+    const oat = parseFloat(document.getElementById('d-oat').value);
+    const wind= parseFloat(document.getElementById('d-wind').value) || 0;
+    if (!cas || !fl || isNaN(cas) || isNaN(fl)) { showError('descent-result', 'Введите CAS и эшелон'); return; }
+    const oat_val = isNaN(oat) ? (-56.5 + (fl > 36089 ? 0 : 0)) : oat; // rough ISA if not provided
+    const tas = casToTas(cas, fl, isNaN(oat) ? (-56.5) : oat);
+    gs_kt = tas + wind;
+  }
+
+  const gs_fpm = gs_kt * 101.269; // kt → ft/min (1 kt = 101.269 ft/min)
+  const gs_ms  = gs_kt * 0.514444;
+
+  let vs, angle;
+
+  if (!isNaN(vsRaw) && vsRaw > 0) {
+    vs = vsRaw;
+    angle = Math.atan(vs / gs_fpm) * 180 / Math.PI;
+  } else if (!isNaN(angleRaw) && angleRaw > 0) {
+    angle = angleRaw;
+    vs = gs_fpm * Math.tan(angle * Math.PI / 180);
+  } else {
+    showError('descent-result', 'Введите вертикальную скорость или угол снижения');
+    return;
+  }
+
+  // Time of descent
+  const time_min = altDiff / vs;
+  const time_s   = time_min * 60;
+
+  // Distance to start descent
+  const dist_nm  = (gs_kt * time_min) / 60;
+  const dist_km  = dist_nm * 1.852;
+
+  // Check angle validity for standard approaches
+  const angleOk = angle >= 2.5 && angle <= 4.0;
+
+  // Rule of thumb: 3° ≈ 300 ft per NM
+  const ftPerNm = altDiff / dist_nm;
+
+  const html = `
+    <div class="results">
+      <div class="results-header">
+        <div class="dot"></div>
+        Результаты расчёта снижения
+      </div>
+      <div class="result-main">
+        <div class="result-label">Начало снижения за</div>
+        <div class="result-value">${dist_nm.toFixed(1)}</div>
+        <div class="result-unit">NM (${dist_km.toFixed(1)} км) до точки</div>
+      </div>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="result-label">Верт. скорость</div>
+          <div class="result-value">${Math.round(vs)}</div>
+          <div class="result-unit">ft/min</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Угол снижения</div>
+          <div class="result-value ${angleOk ? 'green' : 'orange'}">${angle.toFixed(2)}°</div>
+          <div class="result-unit">${angleOk ? '✓ норма' : '⚠ вне нормы'}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Время снижения</div>
+          <div class="result-value">${Math.floor(time_min)}<span style="font-size:14px">м</span>${Math.round((time_min%1)*60)}<span style="font-size:14px">с</span></div>
+          <div class="result-unit">${Math.round(time_s)} сек</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Путевая скорость</div>
+          <div class="result-value">${Math.round(gs_kt)}</div>
+          <div class="result-unit">kt</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Потеря высоты</div>
+          <div class="result-value">${Math.round(altDiff)}</div>
+          <div class="result-unit">ft</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">ft / NM</div>
+          <div class="result-value">${Math.round(ftPerNm)}</div>
+          <div class="result-unit">стандарт ~300</div>
+        </div>
+      </div>
+      <div style="padding:14px 18px;">
+        <div class="formula-note">
+          📐 Правило 3°: VS = GS × 5 (kt)<br>
+          Пример: 300 kt × 5 = 1500 ft/min<br>
+          Дальность: Δh(ft) ÷ 300 = NM
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('descent-result').innerHTML = html;
+  document.getElementById('descent-result').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+// ═══════════════════════════════════════
+// CLIMB GRADIENT CALCULATION
+// ═══════════════════════════════════════
+function calcClimb() {
+  const elev   = parseFloat(document.getElementById('c-elev').value)  || 0;
+  const obs    = parseFloat(document.getElementById('c-obs').value);
+  const dist   = parseFloat(document.getElementById('c-dist').value);
+  const margin = parseFloat(document.getElementById('c-margin').value) || 50;
+  const v2     = parseFloat(document.getElementById('c-v2').value);
+  const oat    = parseFloat(document.getElementById('c-oat').value);
+  const qnh    = parseFloat(document.getElementById('c-qnh').value)    || 1013.25;
+  const mass   = parseFloat(document.getElementById('c-mass').value);
+  const thrust = parseFloat(document.getElementById('c-thrust').value);
+
+  if (isNaN(obs) || isNaN(dist) || isNaN(v2)) {
+    showError('climb-result', 'Введите высоту препятствия, дальность и скорость V2');
+    return;
+  }
+
+  // Pressure altitude correction
+  const pressAlt = elev + (1013.25 - qnh) * 27; // ft
+  // ISA deviation
+  const isaTemp = 15 - 1.98 * (pressAlt / 1000);
+  const isa_dev = isNaN(oat) ? 0 : (oat - isaTemp);
+
+  // Required clearance height above obstacle
+  const obsHt   = obs - elev; // obstacle height above airport
+  const reqHt   = obsHt + margin; // ft
+
+  // Distance in NM
+  const dist_nm = dist / 1852;
+
+  // Required gradient (%)
+  // gradient% = (height_ft / distance_ft) × 100
+  const dist_ft = dist * 3.28084;
+  const reqGrad = (reqHt / dist_ft) * 100;
+
+  // Standard minimum climb gradients (ICAO):
+  // Segment 1 (gear retraction): 0% (positive), Seg 2: 2.4% (2-eng), Seg 3: 1.2%
+  // Net gradient = gross - 0.8% (twin), 1.6% (quad)
+  const minGrad = 2.4; // % ICAO seg 2 twin engine
+  const reqVs   = (v2 * 101.269) * (reqGrad / 100); // ft/min
+
+  // If thrust and mass given: compute actual gradient
+  let actualGrad = null;
+  let actualVs   = null;
+  if (!isNaN(mass) && !isNaN(thrust)) {
+    const W  = mass * 9.81; // N
+    const T  = thrust * 1000; // N
+    const D_approx = W * 0.05 * (gearExtended ? 1.4 : 1.0); // rough drag
+    const netForce = T - D_approx;
+    actualGrad = (netForce / W) * 100;
+    actualVs   = (v2 * 101.269) * (actualGrad / 100);
+  }
+
+  const gradOk = actualGrad !== null ? actualGrad >= reqGrad : null;
+
+  const html = `
+    <div class="results">
+      <div class="results-header">
+        <div class="dot" style="background:var(--accent2); box-shadow: 0 0 8px var(--accent2);"></div>
+        Результаты расчёта градиента
+      </div>
+      <div class="result-main orange-bg">
+        <div class="result-label">Требуемый градиент набора</div>
+        <div class="result-value orange">${reqGrad.toFixed(2)}%</div>
+        <div class="result-unit">для обхода препятствия с запасом ${margin} ft</div>
+      </div>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="result-label">Треб. верт. скорость</div>
+          <div class="result-value orange">${Math.round(reqVs)}</div>
+          <div class="result-unit">ft/min @ V2=${Math.round(v2)}kt</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Мин. ИКАО (сег. 2)</div>
+          <div class="result-value">${minGrad.toFixed(1)}%</div>
+          <div class="result-unit">2-двиг. ВС</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Выс. препятствия</div>
+          <div class="result-value">${Math.round(obsHt)}</div>
+          <div class="result-unit">ft AGL</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Давл. высота</div>
+          <div class="result-value">${Math.round(pressAlt)}</div>
+          <div class="result-unit">ft PA</div>
+        </div>
+        ${actualGrad !== null ? `
+        <div class="result-item">
+          <div class="result-label">Факт. градиент (тяга)</div>
+          <div class="result-value ${gradOk ? 'green' : 'orange'}">${actualGrad.toFixed(2)}%</div>
+          <div class="result-unit">${gradOk ? '✓ достаточно' : '⚠ недостаточно'}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Факт. верт. скорость</div>
+          <div class="result-value ${gradOk ? 'green' : 'orange'}">${Math.round(actualVs)}</div>
+          <div class="result-unit">ft/min</div>
+        </div>` : ''}
+        <div class="result-item">
+          <div class="result-label">Расстояние до преп.</div>
+          <div class="result-value">${dist_nm.toFixed(2)}</div>
+          <div class="result-unit">NM (${(dist/1000).toFixed(2)} км)</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">ΔT от ISA</div>
+          <div class="result-value">${isa_dev >= 0 ? '+' : ''}${isa_dev.toFixed(1)}°</div>
+          <div class="result-unit">${Math.abs(isa_dev) > 10 ? '⚠ проверь тягу' : 'ISA норма'}</div>
+        </div>
+      </div>
+      <div style="padding:14px 18px;">
+        <div class="formula-note">
+          📐 Градиент% = (Δh ft ÷ Δd ft) × 100<br>
+          ИКАО сег.2: мин. 2.4% (2-двиг.)<br>
+          Шасси убраны → меньше лобов. сопротивления
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('climb-result').innerHTML = html;
+  document.getElementById('climb-result').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function showError(targetId, msg) {
+  document.getElementById(targetId).innerHTML = `
+    <div class="error">
+      <span style="font-size:18px;">⚠️</span>
+      <span>${msg}</span>
+    </div>`;
+}
+
+// ═══════════════════════════════════════
+// SERVICE WORKER (offline support)
+// ═══════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  const sw = `
+    const CACHE = 'pilotcalc-v1';
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])));
+      self.skipWaiting();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/'))));
+    });
+  `;
+  const blob = new Blob([sw], {type:'text/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+</script>
+</body>
+</html>
